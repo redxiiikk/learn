@@ -1,0 +1,61 @@
+version: "3"
+services:
+  jobmanager:
+    container_name: job-manager
+    image: docker.io/flink:1.14.3-scala_2.12-java11
+    command:
+      - jobmanager
+    networks:
+      - flink-network
+    ports:
+      - "8081:8081"
+    environment:
+      FLINK_PROPERTIES: "jobmanager.rpc.address: jobmanager"
+  taskmanager-1:
+    depends_on:
+      - jobmanager
+    container_name: taskmanager-1
+    image: docker.io/flink:1.14.3-scala_2.12-java11
+    command:
+      - taskmanager
+    networks:
+      - flink-network
+    environment:
+      FLINK_PROPERTIES: "jobmanager.rpc.address: jobmanager"
+  taskmanager-2:
+    depends_on:
+      - jobmanager
+    container_name: taskmanager-2
+    image: docker.io/flink:1.14.3-scala_2.12-java11
+    networks:
+      - flink-network
+    environment:
+      FLINK_PROPERTIES: "jobmanager.rpc.address: jobmanager"
+    command:
+      - taskmanager
+  redis:
+    container_name: redis
+    image: docker.io/redis:6.2.6
+    networks:
+      - flink-network
+    ports:
+      - "6379:6379"
+  lensesio:
+    container_name: lensesio
+    image: docker.io/lensesio/box:4.3.6
+    networks:
+      - flink-network
+    ports:
+      - "3030:3030"
+    environment:
+      ADV_HOST: 127.0.0.1
+    env_file:
+      - ./local.env
+    deploy:
+      resources:
+        limits:
+          memory: 4096M
+
+networks:
+  flink-network:
+    name: flink-network
