@@ -47,8 +47,9 @@ services:
       - flink-network
     ports:
       - "3030:3030"
+      - "9092:9092"
     environment:
-      ADV_HOST: 127.0.0.1
+      ADV_HOST: lensesio
     env_file:
       - ./local.env
     deploy:
