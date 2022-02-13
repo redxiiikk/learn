@@ -1,9 +1,11 @@
 package com.github.redxiiikk.learn.flink.ccpaymentstatistics;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.commons.lang3.StringEscapeUtils;
+import com.github.redxiiikk.learn.flink.ccpaymentstatistics.event.CcPaymentEvent;
+import com.github.redxiiikk.learn.flink.ccpaymentstatistics.event.CcPaymentStatisticsEvent;
+import lombok.SneakyThrows;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
+import org.apache.flink.api.common.functions.AggregateFunction;
 import org.apache.flink.api.common.serialization.DeserializationSchema;
 import org.apache.flink.api.common.serialization.SerializationSchema;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
@@ -11,83 +13,116 @@ import org.apache.flink.connector.base.DeliveryGuarantee;
 import org.apache.flink.connector.kafka.sink.KafkaRecordSerializationSchema;
 import org.apache.flink.connector.kafka.sink.KafkaSink;
 import org.apache.flink.connector.kafka.source.KafkaSource;
+import org.apache.flink.runtime.state.hashmap.HashMapStateBackend;
+import org.apache.flink.streaming.api.CheckpointingMode;
+import org.apache.flink.streaming.api.datastream.DataStreamSource;
+import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
+import org.apache.flink.streaming.api.windowing.assigners.TumblingEventTimeWindows;
+import org.apache.flink.streaming.api.windowing.time.Time;
 
 import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 
 public class CcPaymentStatisticsApplication {
     public static void main(String[] args) throws Exception {
         StreamExecutionEnvironment environment = StreamExecutionEnvironment.getExecutionEnvironment();
+        environment.setStateBackend(new HashMapStateBackend());
+        environment.enableCheckpointing(100, CheckpointingMode.AT_LEAST_ONCE);
 
-        KafkaSource<CcPaymentEvent> source = KafkaSource.<CcPaymentEvent>builder()
-                .setBootstrapServers("lensesio:9092")
-                .setGroupId("cc-payment-statistics-consumer")
-                .setTopics("cc_payments")
-                .setValueOnlyDeserializer(new JsonDeserializer())
-                .build();
+        DataStreamSource<CcPaymentEvent> source = environment.fromSource(
+                generatorSource(), WatermarkStrategy.noWatermarks(), "cc-payments-topic"
+        );
 
-        KafkaSink<CcPaymentEvent> sink = KafkaSink.<CcPaymentEvent>builder()
-                .setBootstrapServers("lensesio:9092")
-                .setRecordSerializer(
-                        KafkaRecordSerializationSchema.builder()
-                                .setTopic("cc_payment_statistics")
-                                .setValueSerializationSchema(new JsonSerialization())
-                                .build()
-                )
-                .setDeliverGuarantee(DeliveryGuarantee.AT_LEAST_ONCE)
-                .build();
-        environment.fromSource(source, WatermarkStrategy.noWatermarks(), "cc-payment-topic")
-                .keyBy(CcPaymentEvent::getMerchantId)
-                .reduce((value1, value2) -> {
-                    CcPaymentEvent result = new CcPaymentEvent();
-                    result.setMerchantId(value1.getMerchantId());
-                    result.setAmount(value1.getAmount() + value2.getAmount());
-                    return result;
-                })
-                .sinkTo(sink);
+        SingleOutputStreamOperator<CcPaymentStatisticsEvent> aggregate = source.keyBy(CcPaymentEvent::getMerchantId)
+                .window(TumblingEventTimeWindows.of(Time.of(1, TimeUnit.MINUTES)))
+                .aggregate(new CcPaymentAggregateFunction());
 
+        aggregate.sinkTo(generatorKafkaSink()).name("cc-payments-merchant-statistics-topic");
         environment.execute("CcPaymentStatisticsApplication");
     }
 
-    public static final class JsonDeserializer implements DeserializationSchema<CcPaymentEvent> {
-        private final static ObjectMapper objectMapper;
+    private static KafkaSource<CcPaymentEvent> generatorSource() {
+        return KafkaSource.<CcPaymentEvent>builder()
+                .setBootstrapServers("kafka:19092")
+                .setGroupId("cc-payment-statistics-consumer")
+                .setTopics("cc_payments")
+                .setValueOnlyDeserializer(new JsonDeserializationSchema<>(CcPaymentEvent.class))
+                .build();
+    }
 
-        static {
-            objectMapper = new ObjectMapper();
+    private static KafkaSink<CcPaymentStatisticsEvent> generatorKafkaSink() {
+        KafkaRecordSerializationSchema<CcPaymentStatisticsEvent> recordSerializer
+                = KafkaRecordSerializationSchema.builder()
+                .setTopic("cc_payments_merchant_statistics")
+                .setValueSerializationSchema(new JsonSerializationSchema<CcPaymentStatisticsEvent>())
+                .build();
+
+        return KafkaSink.<CcPaymentStatisticsEvent>builder()
+                .setBootstrapServers("kafka:19092")
+                .setRecordSerializer(recordSerializer)
+                .setDeliverGuarantee(DeliveryGuarantee.AT_LEAST_ONCE)
+                .build();
+    }
+
+    public static final class CcPaymentAggregateFunction
+            implements AggregateFunction<CcPaymentEvent, CcPaymentStatisticsEvent, CcPaymentStatisticsEvent> {
+        @Override
+        public CcPaymentStatisticsEvent createAccumulator() {
+            return new CcPaymentStatisticsEvent();
         }
 
         @Override
-        public CcPaymentEvent deserialize(byte[] bytes) throws IOException {
-            return objectMapper.readValue(StringEscapeUtils.escapeJava(new String(bytes)), CcPaymentEvent.class);
+        public CcPaymentStatisticsEvent add(CcPaymentEvent value, CcPaymentStatisticsEvent accumulator) {
+            return new CcPaymentStatisticsEvent()
+                    .setMerchantId(value.getMerchantId())
+                    .setAmount(accumulator.getAmount());
         }
 
         @Override
-        public boolean isEndOfStream(CcPaymentEvent ccPaymentEvent) {
+        public CcPaymentStatisticsEvent getResult(CcPaymentStatisticsEvent accumulator) {
+            return accumulator;
+        }
+
+        @Override
+        public CcPaymentStatisticsEvent merge(CcPaymentStatisticsEvent a, CcPaymentStatisticsEvent b) {
+            return new CcPaymentStatisticsEvent().setAmount(a.getAmount());
+        }
+    }
+
+    public static final class JsonDeserializationSchema<T> implements DeserializationSchema<T> {
+        private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+
+        private final Class<T> tClass;
+
+        public JsonDeserializationSchema(Class<T> tClass) {
+            this.tClass = tClass;
+        }
+
+        @Override
+        public T deserialize(byte[] message) throws IOException {
+            return OBJECT_MAPPER.readValue(message, tClass);
+        }
+
+        @Override
+        public boolean isEndOfStream(T nextElement) {
             return false;
         }
 
         @Override
-        public TypeInformation<CcPaymentEvent> getProducedType() {
-            return TypeInformation.of(CcPaymentEvent.class);
+        public TypeInformation<T> getProducedType() {
+            return TypeInformation.of(tClass);
         }
     }
 
-    public static final class JsonSerialization implements SerializationSchema<CcPaymentEvent> {
-        private final static ObjectMapper objectMapper;
+    public static final class JsonSerializationSchema<T> implements SerializationSchema<T> {
+        private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
-        static {
-            objectMapper = new ObjectMapper();
-        }
-
+        @SneakyThrows
         @Override
-        public byte[] serialize(CcPaymentEvent ccPaymentEvent) {
-            try {
-                return objectMapper.writeValueAsBytes(ccPaymentEvent);
-            } catch (JsonProcessingException e) {
-                e.printStackTrace();
-            }
-
-            return new byte[0];
+        public byte[] serialize(T element) {
+            return OBJECT_MAPPER.writeValueAsBytes(element);
         }
     }
 }
+
