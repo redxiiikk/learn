@@ -1,10 +1,7 @@
 package com.github.redxiiikk.learn.flink.wordcount;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.SneakyThrows;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.functions.FlatMapFunction;
-import org.apache.flink.api.common.serialization.SerializationSchema;
 import org.apache.flink.api.common.serialization.SimpleStringSchema;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.connector.base.DeliveryGuarantee;
@@ -15,15 +12,17 @@ import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.util.Collector;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+
 public final class WordCountApplication {
     public static void main(String[] args) throws Exception {
         final StreamExecutionEnvironment executionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment();
 
-        DataStream<String> text = executionEnvironment.fromSource(
-                generatorSource(), WatermarkStrategy.noWatermarks(), "word-topic"
+        DataStream<String> textStream = executionEnvironment.fromSource(
+                generatorKafkaSource(), WatermarkStrategy.noWatermarks(), "word-topic"
         );
 
-        text.flatMap(new Tokenizer())
+        textStream.flatMap(new Tokenizer())
                 .keyBy(event -> event.f0)
                 .reduce((value1, value2) -> new Tuple2<>(value1.f0, value1.f1 + value2.f1))
                 .sinkTo(generatorKafkaSink()).name("word-count-topic");
@@ -31,7 +30,7 @@ public final class WordCountApplication {
         executionEnvironment.execute("WordCountApplication");
     }
 
-    private static KafkaSource<String> generatorSource() {
+    private static KafkaSource<String> generatorKafkaSource() {
         return KafkaSource.<String>builder()
                 .setBootstrapServers("kafka:19092")
                 .setGroupId("word-count-consumer")
@@ -44,7 +43,8 @@ public final class WordCountApplication {
         KafkaRecordSerializationSchema<Tuple2<String, Integer>> recordSerializer
                 = KafkaRecordSerializationSchema.builder()
                 .setTopic("word_count")
-                .setValueSerializationSchema(new JsonSerializationSchema<Tuple2<String, Integer>>())
+                .setKeySerializationSchema((Tuple2<String, Integer> element) -> element.f0.getBytes(UTF_8))
+                .setValueSerializationSchema((Tuple2<String, Integer> element) -> element.f1.toString().getBytes(UTF_8))
                 .build();
 
         return KafkaSink.<Tuple2<String, Integer>>builder()
@@ -67,16 +67,6 @@ public final class WordCountApplication {
                     out.collect(new Tuple2<>(token, 1));
                 }
             }
-        }
-    }
-
-    public static final class JsonSerializationSchema<T> implements SerializationSchema<T> {
-        private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
-
-        @SneakyThrows
-        @Override
-        public byte[] serialize(T element) {
-            return OBJECT_MAPPER.writeValueAsBytes(element);
         }
     }
 }
