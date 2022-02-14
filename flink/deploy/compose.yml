@@ -12,6 +12,7 @@ services:
       FLINK_PROPERTIES: |
         jobmanager.rpc.address: jobmanager
         env.java.opts.jobmanager: "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5006"
+        metrics.reporter.prom.class: org.apache.flink.metrics.prometheus.PrometheusReporter
   taskmanager:
     depends_on:
       - jobmanager
@@ -63,3 +64,33 @@ services:
       KAFKA_BROKERS: kafka:19092
     depends_on:
       - kafka
+  kafka-lag-exporter:
+    container_name: kafka-lag-exporter
+    image: lightbend/kafka-lag-exporter:0.6.8
+    environment:
+      KAFKA_LAG_EXPORTER_CLUSTERS.0.name: kafka
+      KAFKA_LAG_EXPORTER_CLUSTERS.0.bootstrap-brokers: kafka:19092
+    command:
+      - --kafka.server=kafka:19092
+    depends_on:
+      - kafka
+  prometheus:
+    image: prom/prometheus:v2.33.3
+    container_name: prometheus
+    volumes:
+      - "./config/prometheus.yml:/etc/prometheus/prometheus.yml"
+    ports:
+      - "9090:9090"
+    depends_on:
+      - kafka-lag-exporter
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+  grafana:
+    image: grafana/grafana:8.3.6
+    container_name: grafana
+    environment:
+      GF_INSTALL_PLUGINS: grafana-clock-panel
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
