@@ -2,10 +2,8 @@ package com.github.redxiiikk.learn.flink.ccpaymentstatistics;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.redxiiikk.learn.flink.ccpaymentstatistics.event.CcPaymentEvent;
-import com.github.redxiiikk.learn.flink.ccpaymentstatistics.event.CcPaymentStatisticsEvent;
 import lombok.SneakyThrows;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
-import org.apache.flink.api.common.functions.AggregateFunction;
 import org.apache.flink.api.common.serialization.DeserializationSchema;
 import org.apache.flink.api.common.serialization.SerializationSchema;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
@@ -18,11 +16,9 @@ import org.apache.flink.streaming.api.CheckpointingMode;
 import org.apache.flink.streaming.api.datastream.DataStreamSource;
 import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
-import org.apache.flink.streaming.api.windowing.assigners.TumblingEventTimeWindows;
-import org.apache.flink.streaming.api.windowing.time.Time;
 
 import java.io.IOException;
-import java.util.concurrent.TimeUnit;
+import java.nio.charset.StandardCharsets;
 
 public class CcPaymentStatisticsApplication {
     public static void main(String[] args) throws Exception {
@@ -34,9 +30,14 @@ public class CcPaymentStatisticsApplication {
                 generatorSource(), WatermarkStrategy.noWatermarks(), "cc-payments-topic"
         );
 
-        SingleOutputStreamOperator<CcPaymentStatisticsEvent> aggregate = source.keyBy(CcPaymentEvent::getMerchantId)
-                .window(TumblingEventTimeWindows.of(Time.of(1, TimeUnit.MINUTES)))
-                .aggregate(new CcPaymentAggregateFunction());
+        SingleOutputStreamOperator<CcPaymentEvent> aggregate = source.keyBy(CcPaymentEvent::getMerchantId)
+                .reduce((event1, event2) -> {
+                    CcPaymentEvent statisticsEvent = new CcPaymentEvent();
+                    statisticsEvent.setMerchantId(event1.getMerchantId());
+                    statisticsEvent.setAmount(event1.getAmount() + event1.getAmount());
+
+                    return statisticsEvent;
+                });
 
         aggregate.sinkTo(generatorKafkaSink()).name("cc-payments-merchant-statistics-topic");
         environment.execute("CcPaymentStatisticsApplication");
@@ -51,43 +52,21 @@ public class CcPaymentStatisticsApplication {
                 .build();
     }
 
-    private static KafkaSink<CcPaymentStatisticsEvent> generatorKafkaSink() {
-        KafkaRecordSerializationSchema<CcPaymentStatisticsEvent> recordSerializer
+    private static KafkaSink<CcPaymentEvent> generatorKafkaSink() {
+        KafkaRecordSerializationSchema<CcPaymentEvent> recordSerializer
                 = KafkaRecordSerializationSchema.builder()
                 .setTopic("cc_payments_merchant_statistics")
-                .setValueSerializationSchema(new JsonSerializationSchema<CcPaymentStatisticsEvent>())
+                .setKeySerializationSchema(
+                        (CcPaymentEvent event) -> event.getMerchantId().getBytes(StandardCharsets.UTF_8)
+                )
+                .setValueSerializationSchema(new JsonSerializationSchema<>())
                 .build();
 
-        return KafkaSink.<CcPaymentStatisticsEvent>builder()
+        return KafkaSink.<CcPaymentEvent>builder()
                 .setBootstrapServers("kafka:19092")
                 .setRecordSerializer(recordSerializer)
                 .setDeliverGuarantee(DeliveryGuarantee.AT_LEAST_ONCE)
                 .build();
-    }
-
-    public static final class CcPaymentAggregateFunction
-            implements AggregateFunction<CcPaymentEvent, CcPaymentStatisticsEvent, CcPaymentStatisticsEvent> {
-        @Override
-        public CcPaymentStatisticsEvent createAccumulator() {
-            return new CcPaymentStatisticsEvent();
-        }
-
-        @Override
-        public CcPaymentStatisticsEvent add(CcPaymentEvent value, CcPaymentStatisticsEvent accumulator) {
-            return new CcPaymentStatisticsEvent()
-                    .setMerchantId(value.getMerchantId())
-                    .setAmount(accumulator.getAmount());
-        }
-
-        @Override
-        public CcPaymentStatisticsEvent getResult(CcPaymentStatisticsEvent accumulator) {
-            return accumulator;
-        }
-
-        @Override
-        public CcPaymentStatisticsEvent merge(CcPaymentStatisticsEvent a, CcPaymentStatisticsEvent b) {
-            return new CcPaymentStatisticsEvent().setAmount(a.getAmount());
-        }
     }
 
     public static final class JsonDeserializationSchema<T> implements DeserializationSchema<T> {
