@@ -2,7 +2,7 @@ version: "3.8"
 services:
   jobmanager:
     container_name: job-manager
-    image: docker.io/flink:1.14.3-scala_2.12-java11
+    image: redxiiikk/flink:latest
     command:
       - jobmanager
     ports:
@@ -10,17 +10,19 @@ services:
     environment:
       FLINK_PROPERTIES: |
         jobmanager.rpc.address: jobmanager
+        queryable-state.enable: true
   taskmanager:
     depends_on:
       - jobmanager
     container_name: task-manager
-    image: docker.io/flink:1.14.3-scala_2.12-java11
+    image: redxiiikk/flink:latest
     command:
       - taskmanager
     environment:
       FLINK_PROPERTIES: |
         jobmanager.rpc.address: jobmanager
         taskmanager.numberOfTaskSlots: 4
+        queryable-state.enable: true
   zookeeper:
     image: confluentinc/cp-zookeeper:7.0.0
     hostname: zookeeper
