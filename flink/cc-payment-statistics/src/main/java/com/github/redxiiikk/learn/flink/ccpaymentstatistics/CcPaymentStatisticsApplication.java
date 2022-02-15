@@ -1,25 +1,19 @@
 package com.github.redxiiikk.learn.flink.ccpaymentstatistics;
 
-import com.fasterxml.jackson.annotation.JsonInclude.Include;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.redxiiikk.learn.flink.ccpaymentstatistics.event.CcPaymentEvent;
 import com.github.redxiiikk.learn.flink.ccpaymentstatistics.event.CcPaymentStatisticsEvent;
-import lombok.SneakyThrows;
+import com.github.redxiiikk.learn.flink.commons.JsonDeserializationSchema;
+import com.github.redxiiikk.learn.flink.commons.JsonSerializationSchema;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.functions.ReduceFunction;
-import org.apache.flink.api.common.serialization.DeserializationSchema;
-import org.apache.flink.api.common.serialization.SerializationSchema;
-import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.connector.base.DeliveryGuarantee;
 import org.apache.flink.connector.kafka.sink.KafkaRecordSerializationSchema;
 import org.apache.flink.connector.kafka.sink.KafkaSink;
 import org.apache.flink.connector.kafka.source.KafkaSource;
-import org.apache.flink.runtime.state.hashmap.HashMapStateBackend;
 import org.apache.flink.streaming.api.CheckpointingMode;
 import org.apache.flink.streaming.api.datastream.DataStreamSource;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 
 public class CcPaymentStatisticsApplication {
@@ -67,45 +61,6 @@ public class CcPaymentStatisticsApplication {
                 .setRecordSerializer(recordSerializer)
                 .setDeliverGuarantee(DeliveryGuarantee.AT_LEAST_ONCE)
                 .build();
-    }
-
-    public static final class JsonDeserializationSchema<T> implements DeserializationSchema<T> {
-        private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
-
-        private final Class<T> tClass;
-
-        public JsonDeserializationSchema(Class<T> tClass) {
-            this.tClass = tClass;
-        }
-
-        @Override
-        public T deserialize(byte[] message) throws IOException {
-            return OBJECT_MAPPER.readValue(message, tClass);
-        }
-
-        @Override
-        public boolean isEndOfStream(T nextElement) {
-            return false;
-        }
-
-        @Override
-        public TypeInformation<T> getProducedType() {
-            return TypeInformation.of(tClass);
-        }
-    }
-
-    public static final class JsonSerializationSchema<T> implements SerializationSchema<T> {
-        private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
-
-        static {
-            OBJECT_MAPPER.setSerializationInclusion(Include.NON_NULL);
-        }
-
-        @SneakyThrows
-        @Override
-        public byte[] serialize(T element) {
-            return OBJECT_MAPPER.writeValueAsBytes(element);
-        }
     }
 }
 
