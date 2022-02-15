@@ -1,14 +1,14 @@
 from time import sleep
 from kafka.admin import KafkaAdminClient, NewTopic
 
-if __name__ == "__main__":
-
+def delete_topic(topics):
     admin = KafkaAdminClient(bootstrap_servers="localhost:9092")
-    admin.delete_topics(["word_count"])
-    sleep(3)
-    admin.create_topics(
-        [
-            NewTopic("word", 1, 1),
-            NewTopic("word_count", 1, 1),
-        ]
-    )
+    existed_topics = admin.list_topics()
+
+    for topic in topics:
+        if topic in existed_topics:
+            admin.delete_topics([topic])
+
+
+if __name__ == "__main__":
+    delete_topic(["vehicle_order"])
