@@ -14,5 +14,9 @@ public final class CcPaymentEvent {
     private String currency;
     private String creditCardId;
     private String merchantId;
+
+    public static CcPaymentStatisticsEvent to(CcPaymentEvent event) {
+        return new CcPaymentStatisticsEvent(event.getMerchantId(), event.getAmount());
+    }
 }
 

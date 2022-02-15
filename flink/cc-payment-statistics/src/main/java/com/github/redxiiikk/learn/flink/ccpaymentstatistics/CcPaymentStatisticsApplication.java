@@ -1,9 +1,12 @@
 package com.github.redxiiikk.learn.flink.ccpaymentstatistics;
 
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.redxiiikk.learn.flink.ccpaymentstatistics.event.CcPaymentEvent;
+import com.github.redxiiikk.learn.flink.ccpaymentstatistics.event.CcPaymentStatisticsEvent;
 import lombok.SneakyThrows;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
+import org.apache.flink.api.common.functions.ReduceFunction;
 import org.apache.flink.api.common.serialization.DeserializationSchema;
 import org.apache.flink.api.common.serialization.SerializationSchema;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
@@ -14,7 +17,6 @@ import org.apache.flink.connector.kafka.source.KafkaSource;
 import org.apache.flink.runtime.state.hashmap.HashMapStateBackend;
 import org.apache.flink.streaming.api.CheckpointingMode;
 import org.apache.flink.streaming.api.datastream.DataStreamSource;
-import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 
 import java.io.IOException;
@@ -23,23 +25,21 @@ import java.nio.charset.StandardCharsets;
 public class CcPaymentStatisticsApplication {
     public static void main(String[] args) throws Exception {
         StreamExecutionEnvironment environment = StreamExecutionEnvironment.getExecutionEnvironment();
-        environment.setStateBackend(new HashMapStateBackend());
         environment.enableCheckpointing(100, CheckpointingMode.AT_LEAST_ONCE);
 
         DataStreamSource<CcPaymentEvent> source = environment.fromSource(
                 generatorSource(), WatermarkStrategy.noWatermarks(), "cc-payments-topic"
         );
 
-        SingleOutputStreamOperator<CcPaymentEvent> aggregate = source.keyBy(CcPaymentEvent::getMerchantId)
-                .reduce((event1, event2) -> {
-                    CcPaymentEvent statisticsEvent = new CcPaymentEvent();
-                    statisticsEvent.setMerchantId(event1.getMerchantId());
-                    statisticsEvent.setAmount(event1.getAmount() + event1.getAmount());
+        ReduceFunction<CcPaymentStatisticsEvent> reduceFunction = (event1, event2) -> new CcPaymentStatisticsEvent(
+                event1.getMerchantId(), event1.getAmount() + event2.getAmount()
+        );
 
-                    return statisticsEvent;
-                });
+        source.map(CcPaymentEvent::to)
+                .keyBy(CcPaymentStatisticsEvent::getMerchantId)
+                .reduce(reduceFunction)
+                .sinkTo(generatorKafkaSink()).name("cc-payments-merchant-statistics-topic");
 
-        aggregate.sinkTo(generatorKafkaSink()).name("cc-payments-merchant-statistics-topic");
         environment.execute("CcPaymentStatisticsApplication");
     }
 
@@ -52,17 +52,17 @@ public class CcPaymentStatisticsApplication {
                 .build();
     }
 
-    private static KafkaSink<CcPaymentEvent> generatorKafkaSink() {
-        KafkaRecordSerializationSchema<CcPaymentEvent> recordSerializer
+    private static KafkaSink<CcPaymentStatisticsEvent> generatorKafkaSink() {
+        KafkaRecordSerializationSchema<CcPaymentStatisticsEvent> recordSerializer
                 = KafkaRecordSerializationSchema.builder()
                 .setTopic("cc_payments_merchant_statistics")
                 .setKeySerializationSchema(
-                        (CcPaymentEvent event) -> event.getMerchantId().getBytes(StandardCharsets.UTF_8)
+                        (CcPaymentStatisticsEvent event) -> event.getMerchantId().getBytes(StandardCharsets.UTF_8)
                 )
                 .setValueSerializationSchema(new JsonSerializationSchema<>())
                 .build();
 
-        return KafkaSink.<CcPaymentEvent>builder()
+        return KafkaSink.<CcPaymentStatisticsEvent>builder()
                 .setBootstrapServers("kafka:19092")
                 .setRecordSerializer(recordSerializer)
                 .setDeliverGuarantee(DeliveryGuarantee.AT_LEAST_ONCE)
@@ -96,6 +96,10 @@ public class CcPaymentStatisticsApplication {
 
     public static final class JsonSerializationSchema<T> implements SerializationSchema<T> {
         private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+
+        static {
+            OBJECT_MAPPER.setSerializationInclusion(Include.NON_NULL);
+        }
 
         @SneakyThrows
         @Override
