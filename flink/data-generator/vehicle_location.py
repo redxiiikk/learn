@@ -1,27 +1,23 @@
 import json
-
 from kafka import KafkaProducer
-from faker import Faker
 
 
 def main():
-    generator = Faker()
-
     producer = KafkaProducer(
         bootstrap_servers="localhost:9092",
         key_serializer=str.encode,
         value_serializer=lambda v: json.dumps(v).encode("utf-8"),
     )
 
-    for index in range(30):
-        vechile_order_id = generator.uuid4()
+    for index in range(3000):
+        vechile_order_id = index % 30
         producer.send(
-            "vehicle_order",
-            key=generator.uuid4(),
+            "vehicle_location",
+            key=str(vechile_order_id),
             value={
                 "id": vechile_order_id,
-                "vehicleNumber": index % 30,
-                "statue": "created",
+                "longitude": index * 0.001,
+                "latitude": index * 0.001,
             },
         )
     producer.flush()

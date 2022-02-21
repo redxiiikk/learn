@@ -1,5 +1,4 @@
 import json
-from time import sleep
 
 from faker import Faker
 from kafka import KafkaProducer
