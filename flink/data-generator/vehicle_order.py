@@ -17,7 +17,7 @@ def main():
         vechile_order_id = generator.uuid4()
         producer.send(
             "vehicle_order",
-            key=generator.uuid4(),
+            key=vechile_order_id,
             value={
                 "id": vechile_order_id,
                 "vehicleNumber": index % 30,
