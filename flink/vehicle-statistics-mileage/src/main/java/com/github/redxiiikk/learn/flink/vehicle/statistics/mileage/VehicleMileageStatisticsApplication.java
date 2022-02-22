@@ -6,6 +6,7 @@ import com.github.redxiiikk.learn.flink.vehicle.statistics.mileage.event.Vehicle
 import com.github.redxiiikk.learn.flink.vehicle.statistics.mileage.event.VehicleMileageStatisticsEvent;
 import com.github.redxiiikk.learn.flink.vehicle.statistics.mileage.event.VehicleOrderEvent;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
+import org.apache.flink.api.common.state.BroadcastState;
 import org.apache.flink.api.common.state.MapState;
 import org.apache.flink.api.common.state.MapStateDescriptor;
 import org.apache.flink.api.common.state.ReadOnlyBroadcastState;
@@ -64,7 +65,8 @@ public class VehicleMileageStatisticsApplication {
                 = KafkaRecordSerializationSchema.builder()
                 .setTopic("vehicle_mileage_statistics")
                 .setKeySerializationSchema(
-                        (VehicleMileageStatisticsEvent event) -> event.getOrderId().getBytes(StandardCharsets.UTF_8)
+                        (VehicleMileageStatisticsEvent event) -> (event.getOrderId() + "#"
+                                + event.getVehicleNumber()).getBytes(StandardCharsets.UTF_8)
                 )
                 .setValueSerializationSchema(new JsonSerializationSchema<>())
                 .build();
@@ -76,7 +78,8 @@ public class VehicleMileageStatisticsApplication {
                 .build();
     }
 
-    public static class VehicleMileageStatisticsProcessFunction extends
+    public static class VehicleMileageStatisticsProcessFunction
+            extends
             KeyedBroadcastProcessFunction<String, VehicleLocationEvent, VehicleOrderEvent,
                     VehicleMileageStatisticsEvent> {
 
@@ -118,7 +121,7 @@ public class VehicleMileageStatisticsApplication {
                     ? new VehicleMileageStatisticsEvent(orderEvent.getId(), locationEvent.getId(), locationEvent)
                     : mileageState.get(locationEvent.getId()).updateLocation(locationEvent);
 
-            mileageState.put(locationEvent.getId(), mileageStatisticsEvent);
+            mileageState.put(orderEvent.getId() + "#" + locationEvent.getId(), mileageStatisticsEvent);
 
             out.collect(mileageStatisticsEvent);
         }
@@ -130,7 +133,15 @@ public class VehicleMileageStatisticsApplication {
                         VehicleMileageStatisticsEvent>.Context ctx,
                 Collector<VehicleMileageStatisticsEvent> out) throws Exception {
 
-            ctx.getBroadcastState(orderStateDesc).put(value.getVehicleNumber(), value);
+            BroadcastState<String, VehicleOrderEvent> broadcastState = ctx.getBroadcastState(orderStateDesc);
+
+            if ("CLOSED".equals(value.getStatue())) {
+                if (broadcastState.contains(value.getVehicleNumber())) {
+                    broadcastState.remove(value.getVehicleNumber());
+                }
+            } else {
+                broadcastState.put(value.getVehicleNumber(), value);
+            }
         }
     }
 }
