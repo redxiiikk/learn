@@ -1,13 +1,13 @@
-package com.example.spock;
+package com.github.redxiiikk.learn.spock.parallel;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class ParallelRunSpockAndMariadb4jApplication {
+public class StartApplication {
 
     public static void main(String[] args) {
-        SpringApplication.run(ParallelRunSpockAndMariadb4jApplication.class, args);
+        SpringApplication.run(StartApplication.class, args);
     }
 
 }
