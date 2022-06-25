@@ -1,0 +1,10 @@
+mariaDB4j.port: 3307
+spring:
+  datasource:
+    username: root
+    password:
+    url: jdbc:mysql://localhost:3307/
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    name: user
+  jpa:
+    database-platform: org.hibernate.dialect.MySQL5InnoDBDialect
