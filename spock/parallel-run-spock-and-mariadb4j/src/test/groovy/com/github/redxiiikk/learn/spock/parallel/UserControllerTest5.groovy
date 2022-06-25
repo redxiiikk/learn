@@ -3,6 +3,7 @@ package com.github.redxiiikk.learn.spock.parallel
 import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.test.context.jdbc.Sql
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers
 
@@ -12,6 +13,7 @@ class UserControllerTest5 extends AbstractIntegrationTest {
     @Autowired
     ObjectMapper objectMapper
 
+    @Sql("/sql/test-5.sql")
     def "test-5"() {
         when: "call api"
         def mvcResult = mockMvc.perform(MockMvcRequestBuilders.get("/users"))
@@ -22,6 +24,6 @@ class UserControllerTest5 extends AbstractIntegrationTest {
         def users = objectMapper.readValue(mvcResult.response.contentAsByteArray, USER_LIST_TYPE)
         users != null
         !users.isEmpty()
-        users.size() == 6
+        users.size() == 5
     }
 }
