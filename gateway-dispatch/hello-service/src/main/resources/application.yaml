@@ -1,0 +1,9 @@
+spring:
+  application:
+    name: hello-service
+  cloud:
+    nacos:
+      discovery:
+        server-addr: 127.0.0.1:8848
+        enabled: true
+        namespace: c3adafad-0251-4bee-b0e8-1847373042ae

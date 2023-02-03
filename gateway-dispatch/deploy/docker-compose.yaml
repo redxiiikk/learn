@@ -1,27 +1,40 @@
-version: "3"
+version: "3.8"
 services:
-  nacos:
-    image: nacos/nacos-server:v2.2.0
-    container_name: nacos-standalone
+  nacos-register-service:
+    image: docker.io/nacos/nacos-server:v2.2.0
+    container_name: nacos-register-service
     environment:
       - PREFER_HOST_MODE=hostname
       - MODE=standalone
+      - SPRING_DATASOURCE_PLATFORM=mysql
+      - MYSQL_SERVICE_HOST=nacos-mysql
+      - MYSQL_SERVICE_DB_NAME=nacos-config
+      - MYSQL_SERVICE_PORT=3306
+      - MYSQL_SERVICE_USER=nacos
+      - MYSQL_SERVICE_PASSWORD=nacos
+      - MYSQL_SERVICE_DB_PARAM=characterEncoding=utf8&connectTimeout=1000&socketTimeout=3000&autoReconnect=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
     ports:
       - "8848:8848"
       - "9848:9848"
-  prometheus:
-    container_name: prometheus
-    image: prom/prometheus:latest
-    volumes:
-      - ./prometheus/prometheus-standalone.yaml:/etc/prometheus/prometheus.yml
-    ports:
-      - "9090:9090"
+      - "9555:9555"
+    links:
+      - nacos-mysql
     depends_on:
-      - nacos
-    restart: on-failure
-  grafana:
-    container_name: grafana
-    image: grafana/grafana:latest
+      mysql:
+        condition: service_healthy
+  nacos-mysql:
+    image: docker.io/arm64v8/mysql:8.0
+    container_name: nacos-mysql
+    hostname: nacos-mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_DATABASE=nacos-config
+      - MYSQL_USER=nacos
+      - MYSQL_PASSWORD=nacos
     ports:
-      - 3000:3000
-    restart: on-failure
+      - "3306:3306"
+    healthcheck:
+      test: [ "CMD", "mysqladmin" ,"ping", "-h", "localhost" ]
+      interval: 5s
+      timeout: 10s
+      retries: 10
