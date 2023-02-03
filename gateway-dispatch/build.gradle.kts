@@ -5,6 +5,7 @@ version = "1.0-SNAPSHOT"
 
 plugins {
     kotlin("jvm") version "1.8.10"
+    id("org.springframework.boot") version "3.0.2"
 }
 
 allprojects {
@@ -18,6 +19,7 @@ allprojects {
 subprojects {
     apply {
         plugin("kotlin")
+        plugin("org.springframework.boot")
     }
 
     dependencies {
