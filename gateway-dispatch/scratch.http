@@ -1,0 +1,2 @@
+GET localhost:8080/hello-service/hello/tom
+X-SC-LB-Hint: dev-redxiiikk
