@@ -1,6 +1,6 @@
 # 1. create virtual machine and start run container runtime
 podman machine init -m 4069 --cpus 4 -v $HOME:$HOME --now
-
+podman machine start podman-machine-default
 
 # 2. start deploy all service
 # 2.1 deploy register service
@@ -21,3 +21,6 @@ podman image rm docker.io/redxiiikk/learn-hello-service:1.0.0
 cd hello-service && podman build -t docker.io/redxiiikk/learn-hello-service:1.0.0 . && cd ..
 cd ./deploy && podman-compose up -d hello-service-baseline hello-service-dev && cd ..
 
+# 3. stop all service & stop podman machine
+podman container stop hello-service-baseline hello-service-dev gateway-service nacos-mysql nacos-register-service
+podman machine stop podman-machine-default
