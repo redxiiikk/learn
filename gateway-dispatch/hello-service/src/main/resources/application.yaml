@@ -11,4 +11,4 @@ spring:
         namespace: ${NACOS_NAMESPACE:public}
         group: ${NACOS_GROUP:DEFAULT_GROUP}
         metadata:
-          color: ${LABEL_COLOR:baseline}
+          hint: ${HINT:baseline}

@@ -28,7 +28,7 @@ open class HelloController {
     lateinit var registerGroup: String
 
 
-    @Value("\${spring.cloud.nacos.discovery.metadata.color}")
+    @Value("\${spring.cloud.nacos.discovery.metadata.hint}")
     lateinit var colorMetadata: String
 
     @GetMapping
