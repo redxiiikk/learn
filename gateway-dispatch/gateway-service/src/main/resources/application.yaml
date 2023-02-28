@@ -9,17 +9,13 @@ spring:
         locator:
           enabled: true
           lower-case-service-id: true
-      routes:
-        - id: hello-service
-          uri: lb://hello-service
-          predicates:
-            - Path=/hello-service/**
     nacos:
       discovery:
         enabled: true
         server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}
         namespace: ${NACOS_NAMESPACE:public}
         group: ${NACOS_GROUP:DEFAULT_GROUP}
+      server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}
 management:
   endpoint:
     gateway:
