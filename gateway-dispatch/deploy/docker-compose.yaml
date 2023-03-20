@@ -53,9 +53,6 @@ services:
     ports:
       - "8080:8080"
       - "5005:5005"
-    depends_on:
-      nacos-register-service:
-        condition: service_healthy
   hello-service-baseline:
     image: docker.io/redxiiikk/learn-hello-service:1.0.0
     container_name: hello-service-baseline
@@ -65,9 +62,6 @@ services:
       - NACOS_NAMESPACE=public
       - NACOS_GROUP=com.github.redxiiikk.learn.gateway-dispatch
       - HINT=baseline
-    depends_on:
-      nacos-register-service:
-        condition: service_healthy
   hello-service-dev:
     image: docker.io/redxiiikk/learn-hello-service:1.0.0
     container_name: hello-service-dev
@@ -77,6 +71,3 @@ services:
       - NACOS_NAMESPACE=public
       - NACOS_GROUP=com.github.redxiiikk.learn.gateway-dispatch
       - HINT=dev-redxiiikk
-    depends_on:
-      nacos-register-service:
-        condition: service_healthy
