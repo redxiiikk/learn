@@ -34,6 +34,11 @@ services:
       - "8848:8848"
       - "9848:9848"
       - "9555:9555"
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://nacos-register-service:8848/nacos/v1/ns/health" ]
+      interval: 5s
+      timeout: 10s
+      retries: 10
     depends_on:
       mysql:
         condition: service_healthy
@@ -49,7 +54,8 @@ services:
       - "8080:8080"
       - "5005:5005"
     depends_on:
-      - nacos-register-service
+      nacos-register-service:
+        condition: service_healthy
   hello-service-baseline:
     image: docker.io/redxiiikk/learn-hello-service:1.0.0
     container_name: hello-service-baseline
@@ -60,7 +66,8 @@ services:
       - NACOS_GROUP=com.github.redxiiikk.learn.gateway-dispatch
       - HINT=baseline
     depends_on:
-      - nacos-register-service
+      nacos-register-service:
+        condition: service_healthy
   hello-service-dev:
     image: docker.io/redxiiikk/learn-hello-service:1.0.0
     container_name: hello-service-dev
@@ -71,4 +78,5 @@ services:
       - NACOS_GROUP=com.github.redxiiikk.learn.gateway-dispatch
       - HINT=dev-redxiiikk
     depends_on:
-      - nacos-register-service
+      nacos-register-service:
+        condition: service_healthy
