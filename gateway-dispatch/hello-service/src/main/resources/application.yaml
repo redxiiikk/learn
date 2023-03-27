@@ -11,4 +11,4 @@ spring:
         namespace: ${NACOS_NAMESPACE:public}
         group: ${NACOS_GROUP:DEFAULT_GROUP}
         metadata:
-          hint: ${HINT:baseline}
+          ISOLATION: ${ISOLATION:baseline}

@@ -28,13 +28,13 @@ open class HelloController {
     lateinit var registerGroup: String
 
 
-    @Value("\${spring.cloud.nacos.discovery.metadata.hint}")
-    lateinit var colorMetadata: String
+    @Value("\${spring.cloud.nacos.discovery.metadata.ISOLATION}")
+    lateinit var isolationEnv: String
 
     @GetMapping
     fun hello() = "Hello, World"
 
     @GetMapping("/{name}")
     fun hello(@PathVariable name: String) =
-        "Hello, $name. this is from [$registerNamespace:$registerGroup ]: $colorMetadata"
+        "Hello, $name. this is from [$registerNamespace:$registerGroup ]: $isolationEnv"
 }

@@ -61,7 +61,7 @@ services:
       - NACOS_SERVER_ADDR=nacos-register-service:8848
       - NACOS_NAMESPACE=public
       - NACOS_GROUP=com.github.redxiiikk.learn.gateway-dispatch
-      - HINT=baseline
+      - ISOLATION=baseline
   hello-service-dev:
     image: docker.io/redxiiikk/learn-hello-service:1.0.0
     container_name: hello-service-dev
@@ -70,4 +70,4 @@ services:
       - NACOS_SERVER_ADDR=nacos-register-service:8848
       - NACOS_NAMESPACE=public
       - NACOS_GROUP=com.github.redxiiikk.learn.gateway-dispatch
-      - HINT=dev-redxiiikk
+      - ISOLATION=dev-redxiiikk
