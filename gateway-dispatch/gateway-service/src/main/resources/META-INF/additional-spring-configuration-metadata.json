@@ -1,0 +1,28 @@
+{
+  "properties": [
+    {
+      "name": "spring.cloud.gateway.loadbalancer.isolation.enable",
+      "type": "java.lang.Boolean",
+      "description": "Description for spring.cloud.gateway.loadbalancer.isolation.enable.",
+      "defaultValue": "true"
+    },
+    {
+      "name": "spring.cloud.gateway.loadbalancer.isolation.isolation-header-key",
+      "type": "java.lang.String",
+      "description": "Description for spring.cloud.gateway.loadbalancer.isolation.enable.",
+      "defaultValue": "X-ISOLATION"
+    },
+    {
+      "name": "spring.cloud.gateway.loadbalancer.isolation.isolation-metadata-key",
+      "type": "java.lang.String",
+      "description": "Description for spring.cloud.gateway.loadbalancer.isolation.enable.",
+      "defaultValue": "ISOLATION"
+    },
+    {
+      "name": "spring.cloud.gateway.loadbalancer.isolation.baseline-env-name",
+      "type": "java.lang.String",
+      "description": "Description for spring.cloud.gateway.loadbalancer.isolation.enable.",
+      "defaultValue": "baseline"
+    }
+  ]
+}
