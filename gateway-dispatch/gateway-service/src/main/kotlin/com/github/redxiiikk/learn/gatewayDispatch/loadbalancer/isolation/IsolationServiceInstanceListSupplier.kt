@@ -41,7 +41,9 @@ class IsolationServiceInstanceListSupplier(
             else -> return selectServiceInstancesByHint(instances, property.baselineEnvName)
         }
 
-        return selectServiceInstancesByHint(instances, env)
+        return selectServiceInstancesByHint(instances, env).ifEmpty {
+            selectServiceInstancesByHint(instances, property.baselineEnvName)
+        }
     }
 
     private fun selectServiceInstancesByHint(
