@@ -22,6 +22,11 @@ subprojects {
         plugin("org.springframework.boot")
     }
 
+    repositories {
+        mavenLocal()
+        mavenCentral()
+    }
+
     dependencies {
         implementation(platform("org.springframework.cloud:spring-cloud-dependencies:2021.0.4"))
         implementation(platform("org.springframework.boot:spring-boot-dependencies:2.6.11"))
