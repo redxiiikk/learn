@@ -7,5 +7,5 @@ dependencies {
     implementation("com.alibaba.cloud:spring-cloud-starter-alibaba-nacos-discovery")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
 
-    implementation("com.github.redxiiikk.spring.cloud:spring-cloud-starter-gateway-loadbalancer-extension:0.0.1-SNAPSHOT")
+    implementation("com.github.redxiiikk.spring.cloud:spring-cloud-starter-gateway-extension:0.0.1-SNAPSHOT")
 }
