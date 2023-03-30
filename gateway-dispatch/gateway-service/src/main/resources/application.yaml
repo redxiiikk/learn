@@ -9,13 +9,6 @@ spring:
         locator:
           enabled: true
           lower-case-service-id: true
-      routes:
-        - id: hello-service
-          uri: lb://hello-service
-          predicates:
-          - Path=/hello-service/**
-          filters:
-          - AddRequestHeader=X-SC-LB-Hint, baseline
     nacos:
       discovery:
         enabled: true
