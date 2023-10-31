@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import {House, Setting} from "@element-plus/icons-vue"
 
-const activeIndex = ref('/')
+const router = useRoute()
+const activeIndex = ref(router.path)
 const menuMeta = [
   {
     icon: House,
