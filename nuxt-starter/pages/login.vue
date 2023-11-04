@@ -4,13 +4,13 @@ import {ElNotification} from "element-plus";
 const supabase = useSupabaseClient();
 
 const form = reactive({
-  email: "",
+  phone: "",
   password: ""
 })
 
 async function onLogin() {
   const {error} = await supabase.auth.signInWithPassword({
-    email: form.email,
+    phone: form.phone,
     password: form.password,
   })
 
@@ -29,8 +29,8 @@ async function onLogin() {
 
 <template>
   <el-form :model="form" label-width="120px">
-    <el-form-item label="Email">
-      <el-input v-model="form.email"/>
+    <el-form-item label="Phone">
+      <el-input v-model="form.phone"/>
     </el-form-item>
     <el-form-item label="Password">
       <el-input v-model="form.password" type="password"/>
