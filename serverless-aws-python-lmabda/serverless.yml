@@ -1,0 +1,10 @@
+org: redxiiikk
+app: serverless-aws-python-lmabda
+service: serverless-aws-python-lmabda
+frameworkVersion: '3'
+provider:
+  name: aws
+  runtime: python3.9
+functions:
+  hello:
+    handler: handler.hello
