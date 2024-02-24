@@ -1,0 +1,27 @@
+openapi: 3.0.3
+info:
+  title: Title
+  description: Title
+  version: 1.0.0
+paths:
+  /hello:
+    get:
+      tags:
+        - Hello
+      operationId: hello
+      parameters:
+        - in: path
+          name: name
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: hello
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  name:
+                    type: string
