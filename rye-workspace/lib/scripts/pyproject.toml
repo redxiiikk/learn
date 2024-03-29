@@ -3,9 +3,11 @@ name = "scripts"
 version = "0.1.0"
 description = "Add your description here"
 authors = [
-    { name = "redxiiikkTW", email = "116648160+redxiiikkTW@users.noreply.github.com" }
+    { name = "redxiiikk", email = "72877527+redxiiikk@users.noreply.github.com" }
 ]
-dependencies = []
+dependencies = [
+    "requests>=2.31.0",
+]
 readme = "README.md"
 requires-python = ">= 3.12"
 

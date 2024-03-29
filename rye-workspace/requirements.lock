@@ -7,4 +7,14 @@
 #   all-features: false
 #   with-sources: false
 
--e file:https-proxy
+-e file:lib/scripts
+certifi==2024.2.2
+    # via requests
+charset-normalizer==3.3.2
+    # via requests
+idna==3.6
+    # via requests
+requests==2.31.0
+    # via scripts
+urllib3==2.2.1
+    # via requests

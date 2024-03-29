@@ -7,10 +7,16 @@
 #   all-features: false
 #   with-sources: false
 
--e file:https-proxy
+-e file:lib/scripts
 black==24.3.0
+certifi==2024.2.2
+    # via requests
+charset-normalizer==3.3.2
+    # via requests
 click==8.1.7
     # via black
+idna==3.6
+    # via requests
 mypy-extensions==1.0.0
     # via black
 packaging==24.0
@@ -19,3 +25,7 @@ pathspec==0.12.1
     # via black
 platformdirs==4.2.0
     # via black
+requests==2.31.0
+    # via scripts
+urllib3==2.2.1
+    # via requests
